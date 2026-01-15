@@ -7,7 +7,7 @@ class AuraChatClient:
         self.connected = False
         self.in_chat = False
         
-    def connect(self, host="127.0.0.1", port=12345):
+    def connect(self, host="172.16.7.216", port=12345):
         """Connette al server"""
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -144,4 +144,5 @@ HELP                    - Mostra questo aiuto
 
 if __name__ == "__main__":
     client = AuraChatClient()
+
     client.run()
