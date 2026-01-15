@@ -110,7 +110,7 @@ class AuraChatServer:
     def start(self):
         """Avvia il server"""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind(("172.16.7.216", 12345))
+        self.server_socket.bind(("0.0.0.0", 12345))
         self.server_socket.listen(5)
         print("AURACHAT Server in ascolto sulla porta 12345...")
         self.add_log("SERVER", "SYSTEM", "Server avviato")
@@ -187,11 +187,12 @@ class AuraChatServer:
                 # Controlla se in chat
                 if username in self.active_chats:
                     response = self.handle_chat_message(username, data)
+                    if response:
+                        client_socket.send(response.encode())
                 else:
                     response = self.handle_command(client_socket, username, data)
-                
-                if response:
-                    client_socket.send(response.encode())
+                    if response:
+                        client_socket.send(response.encode())
                 
                 if data.upper() == "EXIT":
                     break
@@ -204,7 +205,16 @@ class AuraChatServer:
                 if client_socket in self.clients:
                     del self.clients[client_socket]
                 if username and username in self.active_chats:
+                    target = self.active_chats[username]
                     del self.active_chats[username]
+                    # Notifica l'altro utente
+                    for sock, info in self.clients.items():
+                        if info["username"] == target:
+                            try:
+                                sock.send(f"\nCHAT_NOTIFY:{username} si è disconnesso\n".encode())
+                            except:
+                                pass
+                            break
             
             if username:
                 self.add_log("CLIENT", username, "Disconnesso")
@@ -216,11 +226,15 @@ class AuraChatServer:
             target = self.active_chats[username]
             del self.active_chats[username]
             
+            # Rimuovi anche l'altro dalla chat
+            if target in self.active_chats:
+                del self.active_chats[target]
+            
             # Trova e notifica l'altro utente
             for sock, info in self.clients.items():
                 if info["username"] == target:
                     try:
-                        sock.send(f"\n[SYSTEM] {username} ha chiuso la chat\n".encode())
+                        sock.send(f"\nCHAT_NOTIFY:{username} ha chiuso la chat\n".encode())
                     except:
                         pass
                     break
@@ -241,16 +255,16 @@ class AuraChatServer:
         }
         self.chat_messages[chat_key].append(msg_data)
         
-        # Inoltra messaggio
+        # Inoltra messaggio all'altro utente
         for sock, info in self.clients.items():
             if info["username"] == target:
                 try:
-                    sock.send(f"\n{username}: {message}\n".encode())
+                    sock.send(f"\nCHAT_MSG:{username}:{message}\n".encode())
                 except:
                     pass
                 break
         
-        return None  # Non rispondere al mittente
+        return None  # Non rispondere al mittente per non interferire con l'input
     
     def handle_command(self, client_socket, username, command):
         """Gestisce comandi"""
@@ -276,9 +290,9 @@ class AuraChatServer:
             return self.get_info(username, info_type)
         
         elif cmd == "EX":
-            format_type = parts[1] if len(parts) > 1 else "txt"
+            format_type = parts[1].lower() if len(parts) > 1 else "txt"
             number = int(parts[2]) if len(parts) > 2 else None
-            who = parts[3] if len(parts) > 3 else "ALL"
+            who = parts[3].upper() if len(parts) > 3 else "ALL"
             return self.export_logs(format_type, number, who)
         
         elif cmd == "USERSLIST":
@@ -291,11 +305,11 @@ class AuraChatServer:
             return self.open_chat(username, target_username)
         
         elif cmd == "CHAT_EX":
-            format_type = parts[1] if len(parts) > 1 else "txt"
+            format_type = parts[1].lower() if len(parts) > 1 else "txt"
             return self.export_chat(username, format_type)
         
         else:
-            return f"Comando sconosciuto: {cmd}"
+            return f"Comando sconosciuto: {cmd}. Digita HELP per vedere i comandi disponibili"
     
     def get_time(self):
         """Restituisce ora corrente"""
@@ -333,10 +347,16 @@ class AuraChatServer:
     def get_users_list(self, current_user):
         """Lista utenti disponibili per chat"""
         result = "=== UTENTI DISPONIBILI ===\n"
+        available = False
         for sock, info in self.clients.items():
             if info["username"] != current_user:
+                available = True
                 status = " [IN CHAT]" if info["username"] in self.active_chats else ""
                 result += f"- {info['username']}{status}\n"
+        
+        if not available:
+            result += "Nessun utente disponibile al momento\n"
+        
         return result
     
     def open_chat(self, username, target_username):
@@ -349,13 +369,13 @@ class AuraChatServer:
                 if target_username in self.active_chats:
                     return f"Errore: {target_username} è già in una chat"
                 
-                # Apri chat
+                # Apri chat per entrambi
                 self.active_chats[username] = target_username
                 self.active_chats[target_username] = username
                 
                 # Notifica l'altro utente
                 try:
-                    sock.send(f"\n[SYSTEM] {username} ha aperto una chat con te. Digita /EXIT per chiudere\n".encode())
+                    sock.send(f"\nCHAT_NOTIFY:{username} ha aperto una chat con te. Digita /EXIT per chiudere\n".encode())
                 except:
                     pass
                 
@@ -372,7 +392,7 @@ class AuraChatServer:
         target = self.active_chats[username]
         chat_key = tuple(sorted([username, target]))
         
-        if chat_key not in self.chat_messages:
+        if chat_key not in self.chat_messages or len(self.chat_messages[chat_key]) == 0:
             return "Nessun messaggio da esportare"
         
         filename = f"chat_{username}_{target}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.{format_type}"
@@ -430,7 +450,6 @@ class AuraChatServer:
                     writer.writerow([log['timestamp'], log['type'], log['user'], log['message']])
         
         elif format_type == "xml":
-            # Copia già in XML
             root = ET.Element("logs")
             for log in logs_to_export:
                 log_elem = ET.SubElement(root, "log")
@@ -447,5 +466,4 @@ class AuraChatServer:
 
 if __name__ == "__main__":
     server = AuraChatServer()
-
     server.start()
