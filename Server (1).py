@@ -110,7 +110,7 @@ class AuraChatServer:
     def start(self):
         """Avvia il server"""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind(("0.0.0.0", 12345))
+        self.server_socket.bind(("172.16.7.216", 12345))
         self.server_socket.listen(5)
         print("AURACHAT Server in ascolto sulla porta 12345...")
         self.add_log("SERVER", "SYSTEM", "Server avviato")
@@ -447,4 +447,5 @@ class AuraChatServer:
 
 if __name__ == "__main__":
     server = AuraChatServer()
+
     server.start()
