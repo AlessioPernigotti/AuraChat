@@ -112,12 +112,12 @@ class AuraChatClient:
 ║                    COMANDI AURACHAT                              ║
 ╚══════════════════════════════════════════════════════════════════╝
 
-📋 COMANDI INFORMATIVI:
+ COMANDI INFORMATIVI:
   TIME                    - Mostra l'ora del server
   NAME                    - Mostra il nome del server
   LOG                     - Mostra gli ultimi 10 log del sistema
   
-📊 COMANDO INFO:
+ COMANDO INFO:
   INFO                    - Mostra tutte le informazioni
   INFO 1                  - Numero di client connessi
   INFO 2                  - Numero di utenti registrati
@@ -125,7 +125,7 @@ class AuraChatClient:
   INFO 4                  - Informazioni di rete del tuo client
   INFO 5                  - Lista utenti disponibili per chat
 
-💾 ESPORTAZIONE LOG:
+ ESPORTAZIONE LOG:
   EX [formato] [n] [who]  - Esporta i log
     formato: xml, csv o txt (default: txt)
     n: numero di log da esportare (opzionale, default: tutti)
@@ -136,7 +136,7 @@ class AuraChatClient:
     EX xml 50             - Esporta ultimi 50 log in XML
     EX csv 100 CLIENT     - Esporta ultimi 100 log dei client in CSV
 
-💬 COMANDI CHAT:
+ COMANDI CHAT:
   USERSLIST               - Mostra utenti disponibili per chattare
   CHAT [username]         - Apri una chat con l'utente specificato
   
@@ -146,10 +146,10 @@ class AuraChatClient:
   CHAT_EX [formato]       - Esporta la chat corrente
     formato: xml, csv o txt (default: txt)
 
-🚪 DISCONNESSIONE:
+ DISCONNESSIONE:
   EXIT                    - Disconnetti dal server
 
-❓ AIUTO:
+ AIUTO:
   HELP                    - Mostra questo menu
 
 ╔══════════════════════════════════════════════════════════════════╗
@@ -222,3 +222,4 @@ if __name__ == "__main__":
     
     client = AuraChatClient()
     client.run()
+
